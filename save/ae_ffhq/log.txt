@@ -1,0 +1,34 @@
+[04-12 15:37:57] Environment setup done.
+[04-12 15:37:57] Datasets - train: len=2
+[04-12 15:37:57]   [make_distributed_loader] Enter: dataset_len=2, batch_size=1, shuffle=True, num_workers=1
+[04-12 15:37:57]   [make_distributed_loader] Creating sampler...
+[04-12 15:37:57]   [make_distributed_loader] Sampler created: <class 'NoneType'>
+[04-12 15:37:57]   [make_distributed_loader] Creating DataLoader: batch_size_per_gpu=1, shuffle=True, pin_memory=False...
+[04-12 15:37:57]   [make_distributed_loader] DataLoader created: <class 'torch.utils.data.dataloader.DataLoader'>
+[04-12 15:37:57] Datasets - train_hrft: len=2
+[04-12 15:37:57]   [make_distributed_loader] Enter: dataset_len=2, batch_size=1, shuffle=False, num_workers=1
+[04-12 15:37:57]   [make_distributed_loader] Creating sampler...
+[04-12 15:37:57]   [make_distributed_loader] Sampler created: <class 'NoneType'>
+[04-12 15:37:57]   [make_distributed_loader] Creating DataLoader: batch_size_per_gpu=1, shuffle=False, pin_memory=False...
+[04-12 15:37:57]   [make_distributed_loader] DataLoader created: <class 'torch.utils.data.dataloader.DataLoader'>
+[04-12 15:37:57] Datasets - val: len=2
+[04-12 15:37:57]   [make_distributed_loader] Enter: dataset_len=2, batch_size=1, shuffle=False, num_workers=1
+[04-12 15:37:57]   [make_distributed_loader] Creating sampler...
+[04-12 15:37:57]   [make_distributed_loader] Sampler created: <class 'NoneType'>
+[04-12 15:37:57]   [make_distributed_loader] Creating DataLoader: batch_size_per_gpu=1, shuffle=False, pin_memory=False...
+[04-12 15:37:57]   [make_distributed_loader] DataLoader created: <class 'torch.utils.data.dataloader.DataLoader'>
+[04-12 15:37:58] [run] Calling make_model (new model)...
+[04-12 15:37:58] [make_model] Instantiating model from cfg.model...
+[04-12 15:37:59] [make_model] Model instantiated.
+[04-12 15:37:59] [make_model] Computing num params...
+[04-12 15:37:59] Model: #params=75.5M (75475039)
+[04-12 15:37:59] [make_model] Num params computed.
+[04-12 15:37:59] [make_model] Moving model to CUDA 0...
+[04-12 15:38:00] [make_model] Model moved to CUDA 0.
+[04-12 15:38:00] [make_model] Finished.
+[04-12 15:38:00]   .encoder 22.3M (22337423)
+[04-12 15:38:00]   .quantizer 24.6K (24576)
+[04-12 15:38:00]   .decoder 33.0M (32957068)
+[04-12 15:38:00]   .renderer 2.7M (2674179)
+[04-12 15:38:00]   .perc_loss 14.7M (14716160)
+[04-12 15:38:00]   .disc 2.8M (2765633)

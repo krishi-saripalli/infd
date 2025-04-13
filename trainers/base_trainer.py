@@ -91,8 +91,6 @@ class BaseTrainer():
         torch.cuda.set_device(self.rank)
         self.device = torch.device('cuda', torch.cuda.current_device())
 
-        dist.barrier()
-        
         self.log(f'Environment setup done.')
 
     def seed_everything(self, seed, rank_shift=True):
@@ -124,13 +122,19 @@ class BaseTrainer():
             if os.path.isfile(resume_file):
                 model_spec = copy.deepcopy(OmegaConf.to_container(self.cfg.model, resolve=True))
                 model_spec['sd'] = ckpt['model']['sd']
+                self.log(f'[run] Calling make_model (resuming from checkpoint)...')
                 self.make_model(model_spec)
                 model_spec = None
                 self.log(f'Resumed model from checkpoint {resume_file}.')
             else:
+                print(f"RANK {self.rank}: BaseTrainer.run: About to call make_model", flush=True)
+                self.log(f'[run] Calling make_model (new model)...')
                 self.make_model()
+                print(f"RANK {self.rank}: BaseTrainer.run: make_model finished", flush=True)
 
+            print(f"RANK {self.rank}: BaseTrainer.run: About to call make_optimizers", flush=True)
             self.make_optimizers()
+            print(f"RANK {self.rank}: BaseTrainer.run: make_optimizers finished", flush=True)
             if os.path.isfile(resume_file):
                 opt_dict = ckpt['optimizers']
                 for k, v in opt_dict.items():
@@ -139,7 +143,9 @@ class BaseTrainer():
                 self.log(f'Resumed optimizers from checkpoint {resume_file}.')
 
             ckpt = None
+            print(f"RANK {self.rank}: BaseTrainer.run: About to call run_training", flush=True)
             self.run_training()
+            
 
         if self.enable_tb:
             self.writer.close()
@@ -147,20 +153,34 @@ class BaseTrainer():
             wandb.finish()
 
     def make_distributed_loader(self, dataset, batch_size, drop_last, shuffle, num_workers):
-        num_workers //= self.world_size
+        self.log(f"  [make_distributed_loader] Enter: dataset_len={len(dataset)}, batch_size={batch_size}, shuffle={shuffle}, num_workers={num_workers}") # Log entry
+        
+        num_workers //= self.world_size # This will be 0
         if self.cfg.random_seed is not None:
             worker_init_fn = partial(worker_init_fn_,
                 num_workers=num_workers, rank=self.rank, world_size=self.world_size, seed=self.cfg.random_seed)
-            persistent_workers = True
+            persistent_workers = (num_workers > 0) # False
         else:
             worker_init_fn = None
             persistent_workers = False
-        sampler = DistributedSampler(dataset, shuffle=shuffle) if self.distributed else None
-        assert batch_size % self.world_size == 0
-        loader = DataLoader(dataset, batch_size // self.world_size, drop_last=drop_last,
-                            sampler=sampler, shuffle=((sampler is None) and shuffle),
-                            num_workers=num_workers, pin_memory=True,
+           
+        self.log(f"  [make_distributed_loader] Creating sampler...") # Log before sampler
+        sampler = DistributedSampler(dataset, shuffle=shuffle) if self.distributed else None # Will be None
+        self.log(f"  [make_distributed_loader] Sampler created: {type(sampler)}") # Log after sampler
+        
+        # Ensure batch size is divisible by world size if distributed
+        if self.distributed:
+             assert batch_size % self.world_size == 0
+             batch_size_per_gpu = batch_size // self.world_size
+        else:
+             batch_size_per_gpu = batch_size # Will use this path
+
+        self.log(f"  [make_distributed_loader] Creating DataLoader: batch_size_per_gpu={batch_size_per_gpu}, shuffle={((sampler is None) and shuffle)}, pin_memory=False...") # Log before DataLoader
+        loader = DataLoader(dataset, batch_size_per_gpu, drop_last=drop_last,
+                            sampler=sampler, shuffle=True,
+                            num_workers=num_workers, pin_memory=True, 
                             worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
+        self.log(f"  [make_distributed_loader] DataLoader created: {type(loader)}") # Log after DataLoader
         return loader, sampler
 
     def make_datasets(self):
@@ -169,7 +189,11 @@ class BaseTrainer():
         self.loaders = dict()
         self.loader_samplers = dict()
 
-        for split, spec in cfg.datasets.items():
+        dataset_items = cfg.datasets.items()
+        if self.is_master:
+            dataset_items = tqdm(dataset_items, desc='Loading datasets', leave=False)
+
+        for split, spec in dataset_items:
             loader_spec = spec.pop('loader')
             dataset = datasets.make(spec)
             self.datasets[split] = dataset
@@ -178,31 +202,46 @@ class BaseTrainer():
             drop_last = loader_spec.get('drop_last', (split == 'train'))
             shuffle = loader_spec.get('shuffle', (split == 'train'))
             self.loaders[split], self.loader_samplers[split] = self.make_distributed_loader(
-                dataset, loader_spec.batch_size, drop_last, shuffle, loader_spec.num_workers)
+                dataset, loader_spec.batch_size, drop_last, shuffle, 
+                loader_spec.num_workers)
 
     def make_model(self, model_spec=None):
         if model_spec is None:
+            self.log(f'[make_model] Instantiating model from cfg.model...')
             model = models.make(self.cfg.model)
+            self.log(f'[make_model] Model instantiated.')
         else:
+            self.log(f'[make_model] Instantiating model from model_spec (loading sd)...')
             model = models.make(model_spec, load_sd=True)
+            self.log(f'[make_model] Model instantiated from model_spec.')
+        self.log(f'[make_model] Computing num params...')
         self.log(f'Model: #params={utils.compute_num_params(model)}')
+        self.log(f'[make_model] Num params computed.')
 
         if self.distributed:
+            self.log(f'[make_model] Applying SyncBatchNorm...')
             model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+            self.log(f'[make_model] SyncBatchNorm applied. Moving model to CUDA {self.rank}...')
             model.cuda()
+            self.log(f'[make_model] Model moved to CUDA {self.rank}. Creating DDP...')
             model_ddp = DistributedDataParallel(model, device_ids=[self.rank],
                 find_unused_parameters=self.cfg.get('find_unused_parameters', False))
+            self.log(f'[make_model] DDP created.')
         else:
+            self.log(f'[make_model] Moving model to CUDA {self.rank}...')
             model.cuda()
+            self.log(f'[make_model] Model moved to CUDA {self.rank}.')
             model_ddp = model
 
         self.model = model
         self.model_ddp = model_ddp
+        self.log(f'[make_model] Finished.')
 
     def make_optimizers(self):
         self.optimizers = {'all': utils.make_optimizer(self.model.parameters(), self.cfg.optimizers)}
 
     def run_training(self):
+        print(f"RANK {self.rank}: BaseTrainer.run_training: Entered run_training", flush=True)
         cfg = self.cfg
         max_iter = cfg['max_iter']
         epoch_iter = cfg['epoch_iter']
@@ -256,12 +295,13 @@ class BaseTrainer():
 
         for epoch in range(start_epoch, max_epoch + 1):
             self.log_buffer = [f'Epoch {epoch}']
-
+            print(f"RANK {self.rank}: BaseTrainer.run_training: Starting epoch {epoch}", flush=True)
+            print(f"RANK {self.rank}: is master: {self.is_master}", flush=True)
             if self.distributed:
                 for sampler in self.loader_samplers.values():
                     if sampler is not self.train_loader_sampler:
                         sampler.set_epoch(epoch)
-
+            print(f"RANK {self.rank}: BaseTrainer.run_training: Setting epoch {epoch} for sampler", flush=True)
             self.model_ddp.train()
 
             ave_scalars = dict()
@@ -274,6 +314,7 @@ class BaseTrainer():
             t1 = time.time()
             for _ in pbar:
                 self.iter += 1
+                print(f"RANK {self.rank}: BaseTrainer.run_training: Iter {self.iter}", flush=True)
                 self.train_iter_start()
 
                 self.train_batch_id += 1
@@ -336,6 +377,7 @@ class BaseTrainer():
         pass
 
     def train_step(self, data, bp=True):
+        print(f"RANK {self.rank}: BaseTrainer.train_step: Starting train_step", flush=True)
         ret = self.model_ddp(data)
         loss = ret.pop('loss')
         ret['loss'] = loss.item()
@@ -344,6 +386,7 @@ class BaseTrainer():
             loss.backward()
             for o in self.optimizers.values():
                 o.step()
+        print(f"RANK {self.rank}: BaseTrainer.train_step: Finished train_step with loss {ret['loss']}", flush=True)
         return ret
 
     def evaluate(self):

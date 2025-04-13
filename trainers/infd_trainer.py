@@ -20,6 +20,8 @@ class INFDTrainer(BaseTrainer):
 
         def get_samples(dataset, s):
             n = len(dataset)
+            print("N is equal to", n)
+            print("S is equal to", s)
             lst = [dataset[i] for i in list(range(0, n, n // s))[:s]]
             data = dict()
             for k in lst[0].keys():
@@ -43,12 +45,14 @@ class INFDTrainer(BaseTrainer):
         if isinstance(self.vis_resolution, int):
             self.vis_resolution = (self.vis_resolution, self.vis_resolution)
         if self.is_master:
-            random.seed(0) # to get a fixed vis set from wrapper_cae
             self.prepare_visualize()
+            print(f"RANK {self.rank}: INFDTrainer.make_datasets: After prepare_visualize call", flush=True)
+            random.seed(0)
             if self.cfg.random_seed is not None:
                 random.seed(self.cfg.random_seed + self.rank)
             else:
                 random.seed()
+            print(f"RANK {self.rank}: INFDTrainer.make_datasets finished", flush=True)
 
     def make_model(self, model_spec=None):
         super().make_model(model_spec)
@@ -66,6 +70,14 @@ class INFDTrainer(BaseTrainer):
             self.optimizers[name] = utils.make_optimizer(self.model.get_params(name), spec)
 
     def train_step(self, data, bp=True):
+        print(f"[Rank {self.rank}] INFDTrainer.train_step: Reached. Data type: {type(data)}", flush=True) # DEBUG
+        if isinstance(data, (list, tuple)):
+            print(f"[Rank {self.rank}] INFDTrainer.train_step: Data shapes: {[d.shape if hasattr(d, 'shape') else type(d) for d in data]}", flush=True) # DEBUG
+        elif isinstance(data, dict):
+            print(f"[Rank {self.rank}] INFDTrainer.train_step: Data keys: {data.keys()}", flush=True) # DEBUG
+        elif hasattr(data, 'shape'):
+            print(f"[Rank {self.rank}] INFDTrainer.train_step: Data shape: {data.shape}", flush=True) # DEBUG
+
         g_iter = self.cfg.get('gan_start_after_iters')
         use_gan = ((g_iter is not None) and self.iter > g_iter)
 

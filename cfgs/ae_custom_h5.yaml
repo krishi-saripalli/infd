@@ -1,0 +1,84 @@
+_base_:
+  - cfgs/models/ae-d4vq.yaml
+  - cfgs/trainers/ae.yaml
+
+datasets:
+  train:
+    name: wrapper_cae # Use the original wrapper
+    args:
+      # --- Wrapper CAE Args ---
+      input_is_tensor: true   # <-- IMPORTANT: Tell wrapper input is a tensor
+      resize_inp: 256       # Encoder input size
+      resize_gt_lb: 256     # Min size for random GT resize (applied to input tensor)
+      resize_gt_ub: 1024    # Max size for random GT resize (applied to input tensor)
+      final_crop_gt: 256    # Final patch size for training (cropped from resized input tensor)
+      # p_whole: 0.0        # Probability to use original scale for GT patch
+      # p_max: 0.0          # Probability to use max scale for GT patch
+
+      # --- Inner Dataset Config (HDF5Dataset) ---
+      dataset: 
+        name: hdf5_dataset # Registered name for HDF5Dataset
+        args:
+          # --- Specify HDF5Dataset parameters here ---
+          data_dir: /users/ksaripal/data/ksaripal/infd/h5 # Directory containing HDF5 files
+          noise_types: ["voronoi"] # Example: List the noise types to load
+          augment: true           # Enable HDF5 internal geometric augment (flips)
+          cutmix: 0               # Enable HDF5 internal cutmix (e.g., 4 patches) (Must be 0 when using a single noise type!!!)
+          cutmix_prob: 0        # Probability of applying cutmix (Must be 0 when using a single noise type!!!)
+          cutmix_rot: true        # Allow rotation for cutmix masks
+          max_samples: 500       # TODO: make this null eventually when multi gpu works
+          # rank & world_size are handled by the launcher.
+          # -----------------------------------------
+
+    loader:
+      batch_size: 8
+      num_workers: 0
+
+  # --- train_hrft: Configure similarly if needed --- 
+  # train_hrft:
+  #   name: wrapper_cae 
+  #   args:
+  #     input_is_tensor: true
+  #     resize_inp: 256
+  #     resize_gt_lb: 256 
+  #     resize_gt_ub: 1024 
+  #     final_crop_gt: 256
+  #     p_max: 0.5 # Example: Higher probability of using max scale for HRFT
+  #     dataset:
+  #       name: hdf5_dataset
+  #       args:
+  #         data_dir: /path/to/your/h5_data_directory
+  #         noise_types: ["gaussian", "perlin", "simplex"]
+  #         augment: true # Or false if HRFT shouldn't have flips
+  #         cutmix: 0 # Typically disable cutmix for HRFT
+  #         max_samples: null
+  #   loader:
+  #     batch_size: 8
+  #     num_workers: 16
+
+  # --- val: Configure validation set --- 
+  # val:
+  #   name: wrapper_cae # Use original wrapper for validation too
+  #   args:
+  #     input_is_tensor: true # Val data is also tensor from HDF5
+  #     resize_inp: 256
+  #     # GT args for validation - often use fixed resize/crop
+  #     resize_gt_lb: 256 # Example: Use fixed lower bound for consistent val GT size
+  #     resize_gt_ub: 256 # Example: Use fixed upper bound 
+  #     final_crop_gt: 256
+  #     dataset:
+  #       name: hdf5_dataset
+  #       args:
+  #         data_dir: /users/ksaripal/data/ksaripal/infd/h5 # Use same or different H5 source for val
+  #         noise_types: ["voronoi"] # Match train or relevant subset
+  #         augment: false   # No geometric augmentation for validation
+  #         cutmix: 0        # No cutmix for validation
+  #         max_samples: 500 # TODO: make this null eventually when multi gpu works
+
+  #   loader:
+  #     batch_size: 8 # Can be different for validation
+  #     num_workers: 1
+
+visualize:
+  ae_center_zoom_res: 1024 # Resolution for zoomed visualization if used 
+  ds_samples: 0 # TODO: figure out why when this is > 0, the model hangs indefinitely
