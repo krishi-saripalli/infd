@@ -26,13 +26,14 @@ datasets:
           cutmix: 0               # Enable HDF5 internal cutmix (e.g., 4 patches) (Must be 0 when using a single noise type!!!)
           cutmix_prob: 0        # Probability of applying cutmix (Must be 0 when using a single noise type!!!)
           cutmix_rot: true        # Allow rotation for cutmix masks
-          max_samples: 500       # TODO: make this null eventually when multi gpu works
+          max_samples: null       # TODO: make this null eventually when multi gpu works
           # rank & world_size are handled by the launcher.
+          force_rgb: true         # <-- Add flag to force 3 channels
           # -----------------------------------------
 
     loader:
-      batch_size: 8
-      num_workers: 0
+      batch_size: 1
+      num_workers: 4
 
   # --- train_hrft: Configure similarly if needed --- 
   # train_hrft:
