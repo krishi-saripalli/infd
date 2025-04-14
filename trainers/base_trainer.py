@@ -3,6 +3,8 @@ import time
 import copy
 import random
 from functools import partial
+import sys
+import torchvision
 
 import yaml
 import wandb
@@ -127,14 +129,14 @@ class BaseTrainer():
                 model_spec = None
                 self.log(f'Resumed model from checkpoint {resume_file}.')
             else:
-                print(f"RANK {self.rank}: BaseTrainer.run: About to call make_model", flush=True)
+                
                 self.log(f'[run] Calling make_model (new model)...')
                 self.make_model()
-                print(f"RANK {self.rank}: BaseTrainer.run: make_model finished", flush=True)
+                
 
-            print(f"RANK {self.rank}: BaseTrainer.run: About to call make_optimizers", flush=True)
+            
             self.make_optimizers()
-            print(f"RANK {self.rank}: BaseTrainer.run: make_optimizers finished", flush=True)
+            
             if os.path.isfile(resume_file):
                 opt_dict = ckpt['optimizers']
                 for k, v in opt_dict.items():
@@ -143,7 +145,7 @@ class BaseTrainer():
                 self.log(f'Resumed optimizers from checkpoint {resume_file}.')
 
             ckpt = None
-            print(f"RANK {self.rank}: BaseTrainer.run: About to call run_training", flush=True)
+            
             self.run_training()
             
 
@@ -177,7 +179,7 @@ class BaseTrainer():
 
         self.log(f"  [make_distributed_loader] Creating DataLoader: batch_size_per_gpu={batch_size_per_gpu}, shuffle={((sampler is None) and shuffle)}, pin_memory=False...") # Log before DataLoader
         loader = DataLoader(dataset, batch_size_per_gpu, drop_last=drop_last,
-                            sampler=sampler, shuffle=True,
+                            sampler=sampler, shuffle=(sampler is None) and shuffle,
                             num_workers=num_workers, pin_memory=True, 
                             worker_init_fn=worker_init_fn, persistent_workers=persistent_workers)
         self.log(f"  [make_distributed_loader] DataLoader created: {type(loader)}") # Log after DataLoader
@@ -241,7 +243,7 @@ class BaseTrainer():
         self.optimizers = {'all': utils.make_optimizer(self.model.parameters(), self.cfg.optimizers)}
 
     def run_training(self):
-        print(f"RANK {self.rank}: BaseTrainer.run_training: Entered run_training", flush=True)
+        
         cfg = self.cfg
         max_iter = cfg['max_iter']
         epoch_iter = cfg['epoch_iter']
@@ -295,13 +297,13 @@ class BaseTrainer():
 
         for epoch in range(start_epoch, max_epoch + 1):
             self.log_buffer = [f'Epoch {epoch}']
-            print(f"RANK {self.rank}: BaseTrainer.run_training: Starting epoch {epoch}", flush=True)
-            print(f"RANK {self.rank}: is master: {self.is_master}", flush=True)
+            
+            
             if self.distributed:
                 for sampler in self.loader_samplers.values():
                     if sampler is not self.train_loader_sampler:
                         sampler.set_epoch(epoch)
-            print(f"RANK {self.rank}: BaseTrainer.run_training: Setting epoch {epoch} for sampler", flush=True)
+            
             self.model_ddp.train()
 
             ave_scalars = dict()
@@ -314,7 +316,6 @@ class BaseTrainer():
             t1 = time.time()
             for _ in pbar:
                 self.iter += 1
-                print(f"RANK {self.rank}: BaseTrainer.run_training: Iter {self.iter}", flush=True)
                 self.train_iter_start()
 
                 self.train_batch_id += 1
@@ -329,6 +330,19 @@ class BaseTrainer():
                 data = {k: v.cuda() for k, v in data.items()}
                 t0 = time.time()
                 t_data += t0 - t1
+
+
+                #debug
+                # if self.iter == 1 and self.is_master: 
+                #     try:
+                #         img_tensor = data['inp'][0].cpu()
+                #         img_tensor = torch.clamp(img_tensor, 0, 1)
+                #         save_path = os.path.join(self.cfg._env.save_dir, 'first_batch_image.png')
+                #         torchvision.utils.save_image(img_tensor, save_path)
+                #         self.log(f'Saved first batch image to {save_path} and exiting.')
+                #     except Exception as e:
+                #         self.log(f'Error saving first batch image: {e}')
+                #     sys.exit(0)
 
                 ret = self.train_step(data)
                 t1 = time.time()
@@ -386,7 +400,7 @@ class BaseTrainer():
             loss.backward()
             for o in self.optimizers.values():
                 o.step()
-        print(f"RANK {self.rank}: BaseTrainer.train_step: Finished train_step with loss {ret['loss']}", flush=True)
+        
         return ret
 
     def evaluate(self):

@@ -32,7 +32,7 @@ datasets:
           # -----------------------------------------
 
     loader:
-      batch_size: 1
+      batch_size: 4
       num_workers: 4
 
   # --- train_hrft: Configure similarly if needed --- 
@@ -82,4 +82,4 @@ datasets:
 
 visualize:
   ae_center_zoom_res: 1024 # Resolution for zoomed visualization if used 
-  ds_samples: 0 # TODO: figure out why when this is > 0, the model hangs indefinitely
+  ds_samples: 1 # TODO: figure out why when this is > 0, the model hangs indefinitely

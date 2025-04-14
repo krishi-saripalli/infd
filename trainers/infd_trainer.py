@@ -70,13 +70,12 @@ class INFDTrainer(BaseTrainer):
             self.optimizers[name] = utils.make_optimizer(self.model.get_params(name), spec)
 
     def train_step(self, data, bp=True):
-        print(f"[Rank {self.rank}] INFDTrainer.train_step: Reached. Data type: {type(data)}", flush=True) # DEBUG
-        if isinstance(data, (list, tuple)):
-            print(f"[Rank {self.rank}] INFDTrainer.train_step: Data shapes: {[d.shape if hasattr(d, 'shape') else type(d) for d in data]}", flush=True) # DEBUG
-        elif isinstance(data, dict):
-            print(f"[Rank {self.rank}] INFDTrainer.train_step: Data keys: {data.keys()}", flush=True) # DEBUG
-        elif hasattr(data, 'shape'):
-            print(f"[Rank {self.rank}] INFDTrainer.train_step: Data shape: {data.shape}", flush=True) # DEBUG
+        # if isinstance(data, (list, tuple)):
+        #     print(f"[Rank {self.rank}] INFDTrainer.train_step: Data shapes: {[d.shape if hasattr(d, 'shape') else type(d) for d in data]}", flush=True) # DEBUG
+        # elif isinstance(data, dict):
+        #     print(f"[Rank {self.rank}] INFDTrainer.train_step: Data keys: {data.keys()}", flush=True) # DEBUG
+        # elif hasattr(data, 'shape'):
+        #     print(f"[Rank {self.rank}] INFDTrainer.train_step: Data shape: {data.shape}", flush=True) # DEBUG
 
         g_iter = self.cfg.get('gan_start_after_iters')
         use_gan = ((g_iter is not None) and self.iter > g_iter)
