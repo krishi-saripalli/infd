@@ -251,16 +251,14 @@ class BaseTrainer():
         max_epoch = max_iter // epoch_iter
 
         save_iter = cfg.get('save_iter')
-        assert save_iter is None or save_iter % epoch_iter == 0
-        save_epoch = save_iter // epoch_iter if save_iter is not None else max_epoch + 1
-
+        # assert save_iter is None or save_iter % epoch_iter == 0
+        # save_epoch = save_iter // epoch_iter if save_iter is not None else max_epoch + 1
         eval_iter = cfg.get('eval_iter')
-        assert eval_iter is None or eval_iter % epoch_iter == 0
-        eval_epoch = eval_iter // epoch_iter if eval_iter is not None else max_epoch + 1
-
+        # assert eval_iter is None or eval_iter % epoch_iter == 0   
+        # eval_epoch = eval_iter // epoch_iter if eval_iter is not None else max_epoch + 1
         vis_iter = cfg.get('vis_iter')
-        assert vis_iter is None or vis_iter % epoch_iter == 0
-        vis_epoch = vis_iter // epoch_iter if vis_iter is not None else max_epoch + 1
+        # assert vis_iter is None or vis_iter % epoch_iter == 0
+        # vis_epoch = vis_iter // epoch_iter if vis_iter is not None else max_epoch + 1
 
         if cfg.get('ckpt_select_metric') is not None:
             m = cfg.ckpt_select_metric
@@ -298,6 +296,7 @@ class BaseTrainer():
         for epoch in range(start_epoch, max_epoch + 1):
             self.log_buffer = [f'Epoch {epoch}']
             
+            epoch_eval_scalars = None
             
             if self.distributed:
                 for sampler in self.loader_samplers.values():
@@ -317,6 +316,15 @@ class BaseTrainer():
             for _ in pbar:
                 self.iter += 1
                 self.train_iter_start()
+
+                if save_iter is not None and self.iter % save_iter == 0 and self.iter != max_iter:
+                    self.save_ckpt(f'iter-{self.iter}.pth')
+
+                if eval_iter is not None and self.iter % eval_iter == 0:
+                    epoch_eval_scalars = self.evaluate()
+
+                if vis_iter is not None and self.iter % vis_iter == 0:
+                    self.visualize()
 
                 self.train_batch_id += 1
                 if self.train_batch_id == len(self.train_loader):
@@ -366,20 +374,12 @@ class BaseTrainer():
             logtext += f' (d={t_data / (t_data + t_model):.2f})'
             self.log_buffer.append(logtext)
 
-            if epoch % save_epoch == 0 and epoch != max_epoch:
-                self.save_ckpt(f'iter-{self.iter}.pth')
-
-            if epoch % eval_epoch == 0:
-                eval_ave_scalars = self.evaluate()
-                if self.ckpt_select_metric is not None:
-                    v = eval_ave_scalars[self.ckpt_select_metric].item()
-                    if ((self.ckpt_select_type == 'min' and v < self.ckpt_select_v) or
-                        (self.ckpt_select_type == 'max' and v > self.ckpt_select_v)):
-                        self.ckpt_select_v = v
-                        self.save_ckpt('best-model.pth')
-
-            if epoch % vis_epoch == 0:
-                self.visualize()
+            if epoch_eval_scalars is not None and self.ckpt_select_metric is not None:
+                v = epoch_eval_scalars[self.ckpt_select_metric].item()
+                if ((self.ckpt_select_type == 'min' and v < self.ckpt_select_v) or
+                    (self.ckpt_select_type == 'max' and v > self.ckpt_select_v)):
+                    self.ckpt_select_v = v
+                    self.save_ckpt('best-model.pth')
 
             self.save_ckpt('last-model.pth')
 

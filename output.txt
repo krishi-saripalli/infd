@@ -1,0 +1,10 @@
+INFO: Overriding noise types with: ['voronoi']
+Namespace(ae_checkpoint_path='/users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_20250416_002955/last-model.pth', ae_config_path='cfgs/ae_custom_h5.yaml', attention=True, batch_size=4, beta1=0.9, beta2=0.99, cond_layers=[], cutmix=1, cutmix_prob=0.5, cutmix_rot=True, data_dir='./data', dry_run=False, ema_decay=0.995, emb_penalty=0.02, exp_name='latent_voronoi_medium_test', grad_accum=2, image_size=256, latent_dataset_path='/users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_20250416_002955/latent.hdf5', latent_diffusion=True, latent_dir=None, loss_fn='l2', lr=8e-05, milestone=None, model_config='medium', noise_types=['voronoi'], num_workers=4, objective='pred_noise', optim='adamw', out_dir='./results_latent', pos_enc=0, precision='fp32', restart_opt=False, sample_every=500, sample_timesteps=50, tf32=False, train_num_steps=50000, train_timesteps=1000)
+UNET: down_cond128_0(64 -> 64) down_cond128_1(64 -> 128) down_cond128_2(128 -> 128) down_cond128_3(128 -> 256) mid_cond128_(256 -> 256) up_cond128_0(256 -> 128) up_cond128_1(128 -> 128) up_cond128_2(128 -> 64) up_cond128_3(64 -> 64) final_cond128_(64 -> 3)
+Num model parameters 22559555
+Training with  fp32  precision
+INFO: Latent diffusion mode enabled. Loading AE...
+INFO: Loading INFD AE components...
+Adding /oscar/home/ksaripal/BVC/infd to sys.path for INFD model loading
+Error: Could not import 'models' from INFD project root at /oscar/home/ksaripal/BVC/infd
+Please ensure you are running from the INFD directory and OneNoise is a subdirectory.

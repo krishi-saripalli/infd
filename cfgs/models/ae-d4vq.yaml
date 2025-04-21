@@ -3,15 +3,21 @@ model:
   args:
     encoder:
       name: encoder_vqf4
+      #TODO: originally didn't override ch but had to get model to fit with batch size (72M to 24M)
+      args:
+        ch: 32
     z_shape: [3, 64, 64]
     quantizer: true
-    n_embed: 8192
+    n_embed: 8192 #TODO: originally 8192
     decoder:
       name: decoder_vqf4
+      #TODO: originally didn't override ch
+      args:
+        ch: 32
     renderer:
       name: renderer_concat_wrapper
       args:
-        z_dec_channels: 128
+        z_dec_channels: 32 #TODO: originally 128
         net:
           name: simple_renderer_net
           args: {hidden_channels: 256}

@@ -1,11 +1,16 @@
 import copy
+import sys
+import os
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 import models
 from models import register
-from utils.geometry import convert_liif_feat_coord_cell, convert_posenc
+
+from infd.utils.geometry import convert_liif_feat_coord_cell, convert_posenc
+from einops import rearrange
 
 
 @register('renderer_concat_wrapper')

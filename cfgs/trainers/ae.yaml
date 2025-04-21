@@ -1,10 +1,10 @@
 trainer: infd_trainer
 
-max_iter: 1200000
+max_iter: 500000
 epoch_iter: 10000
-eval_iter: 50000
-save_iter: 200000
-vis_iter: 100000
+eval_iter: 10000
+save_iter: 100000
+vis_iter: 5000
 ckpt_select_metric:
   name: perc_loss
   type: min
