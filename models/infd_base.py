@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import models
 from models.vqgan.quantizer import VectorQuantizer
 from diffusion.utils import make_diffusion_train_components, get_dm_loss
-from utils.misc import count_params
+from utils.utils import compute_num_params as count_params
 
 
 class INFDBase(nn.Module):
