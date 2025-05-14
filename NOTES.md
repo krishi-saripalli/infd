@@ -30,9 +30,30 @@ python OneNoise/decode_latents.py \
     --output_size 256
 ```
 
+> TODO: Fix `vertical_strip` outputs so that they correctly pass the correct gr4id dimensions to the INFD decoder + renderer.
+
 To run a single GPU debug version of latent diffusion, run 
 
 ```
-python OneNoise/train.py     --model_config medium     --latent_diffusion     --latent_dataset_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_20250416_002955/     --ae_config_path cfgs/ae_custom_h5.yaml     --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_20250416_002955/last-model.pth     --noise_types voronoi     --out_dir /users/ksaripal/data/ksaripal/infd/out/     --exp_name latent_voronoi_medium_test     --batch_size 4     --grad_accum 2     --sample_every 1     --train_num_steps 50000     --lr 8e-5     --precision fp32 --auto_normalize_latents False  --z_score_latents True
+python OneNoise/train.py     --model_config medium     --latent_diffusion     --latent_dataset_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_20250416_002955/     --ae_config_path cfgs/ae_custom_h5.yaml     --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_20250416_002955/last-model.pth     --noise_types voronoi     --out_dir /users/ksaripal/data/ksaripal/infd/out/     --exp_name latent_voronoi_medium_test     --batch_size 4     --grad_accum 2     --sample_every 1     --train_num_steps 50000     --lr 8e-5     --precision fp32 --auto_normalize_latents False  --z_score_latents True 
 
 ```
+
+To test the model run
+
+```
+python OneNoise/test.py \
+    --out_dir OneNoise/pretrained \
+    --exp_name tiny_spherical \
+    --checkpoint latent-voronoi-51.pt \
+    --latent_diffusion \
+    --ae_config_path cfgs/ae_custom_h5.yaml \
+    --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_20250416_002955/last-model.pth \
+    --output_file tiny_spherical_voronoi_interpolation.png \
+    --sample_timesteps 50 \
+    --device cuda:0 \
+    --model_config medium
+```
+
+The model seems to respond well to uniform parameters, but fails to take on the blending behaviour given per pixel spatial conditoning.
+TODO: we need to conditon the *AE* in the same way as the diffusion model.
