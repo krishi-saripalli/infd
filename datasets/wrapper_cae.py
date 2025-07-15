@@ -90,8 +90,13 @@ class BaseWrapperCAE:
                 })
 
         else:
+            cls_labels, sbsparams = None, None
             if isinstance(data, tuple):
                 img_tensor = data[0]
+                if len(data) > 1:
+                    cls_labels = data[1]
+                if len(data) > 2:
+                    sbsparams = data[2]
             else:
                 img_tensor = data
 
@@ -157,6 +162,11 @@ class BaseWrapperCAE:
                     'gt_coord': coord,
                     'gt_cell': cell,
                 })
+
+        if cls_labels is not None:
+            ret['cls_labels'] = cls_labels
+        if sbsparams is not None:
+            ret['sbsparams'] = sbsparams
 
         return ret
 

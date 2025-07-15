@@ -80,18 +80,33 @@ class INFDBase(nn.Module):
         else:
             return z
 
-    def decode_z(self, z, ret_quant_loss=False, gt_cell=None):
-        if self.quantizer is not None:
-            z, quant_loss, _ = self.quantizer(z)
-        else:
-            quant_loss = None
+    def decode_z(self, latent_features, ret_quant_loss=False, gt_cell=None, classes=None, substance_params=None):
+        processed_features = latent_features
+        core_decoder_module = self.decoder
+        is_wrapped_sequential_decoder = isinstance(self.decoder, torch.nn.Sequential) and len(self.decoder) > 1
 
-        z_dec = self.decoder(z)
+        if is_wrapped_sequential_decoder:
+            core_decoder_module = self.decoder[1]
+            processed_features = self.decoder[0](latent_features)
+
+        quant_loss = None
+        if self.quantizer is not None:
+            processed_features, quant_loss, _ = self.quantizer(processed_features)
+        
+        spade_is_active_on_core_module = hasattr(core_decoder_module, 'use_spade') and core_decoder_module.use_spade
+
+        if spade_is_active_on_core_module:
+            reconstructed_output = core_decoder_module(processed_features, classes=classes, substance_params=substance_params)
+        else:
+            if is_wrapped_sequential_decoder:
+                reconstructed_output = self.decoder(latent_features)
+            else:
+                reconstructed_output = self.decoder(processed_features)
 
         if ret_quant_loss:
-            return z_dec, quant_loss
+            return reconstructed_output, quant_loss
         else:
-            return z_dec
+            return reconstructed_output
 
     def forward(self, data, mode, has_opt=None, **kwargs):
         gd = self.get_gd_from_opt(has_opt)
@@ -135,11 +150,16 @@ class INFDBase(nn.Module):
                                                    model_kwargs=model_kwargs).item()
 
         if mode == 'z_dec':
+            current_classes = data.get('cls_labels')
+            current_sbs_params = data.get('sbsparams')
+
             if gd['decoder']:
-                z_dec, quant_loss = self.decode_z(z, ret_quant_loss=True, gt_cell=data['gt_cell'])
+                z_dec, quant_loss = self.decode_z(z, ret_quant_loss=True, gt_cell=data.get('gt_cell'),
+                                              classes=current_classes, substance_params=current_sbs_params)
             else:
                 with torch.no_grad():
-                    z_dec, quant_loss = self.decode_z(z, ret_quant_loss=True, gt_cell=data['gt_cell'])
+                    z_dec, quant_loss = self.decode_z(z, ret_quant_loss=True, gt_cell=data.get('gt_cell'),
+                                                      classes=current_classes, substance_params=current_sbs_params)
             ret_z = z_dec
 
             if self.quantizer is not None:

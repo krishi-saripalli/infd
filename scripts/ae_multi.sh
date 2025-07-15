@@ -17,4 +17,4 @@ module load anaconda/2023.09-0-7nso27y
 source /gpfs/runtime/opt/anaconda/2023.03-1/etc/profile.d/conda.sh
 conda activate infd
 
-torchrun --standalone --nproc-per-node=8 run.py --cfg cfgs/ae_custom_h5.yaml --save-root /users/ksaripal/data/ksaripal/infd/ckpt --name ae_voronoi_$(date +%Y%m%d_%H%M%S) -w
+torchrun --standalone --nproc-per-node=8 run.py --cfg cfgs/ae_custom_h5.yaml --save-root /users/ksaripal/data/ksaripal/infd/ckpt --name ae_voronoi_cond_$(date +%Y%m%d_%H%M%S) -w

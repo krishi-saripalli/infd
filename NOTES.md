@@ -3,27 +3,27 @@ CUDA_VISIBLE_DEVICES=0 torchrun --standalone --nproc-per-node=1 run.py --cfg cfg
 CUDA_VISIBLE_DEVICES=0,1 torchrun --standalone --nproc-per-node=2 run.py --cfg cfgs/ae_custom_h5.yaml --save-root /users/ksaripal/data/ksaripal/infd/ckpt --name ae_voronoi
 
 
-Voronoi checkpoint is at /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_20250416_002955/last-model.pth
+Voronoi checkpoint is at /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_cond_20250515_002907/last-model.pth
 
 To create latent dataset with pre-trained encoder
 ```
 python OneNoise/create_latents.py \
     --ae_train_config cfgs/ae_custom_h5.yaml \
-    --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_20250416_002955/last-model.pth \
-    --output_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_20250416_002955/latent.hdf5
+    --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_cond_20250515_002907/last-model.pth \
+    --output_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_cond_20250515_002907/latent.hdf5
 ```
 
 
 
-- We need to update `create_latents.py`. If the data was augmented with cutmix, then it's spatial paramters need to be saved. It's probably less tedious to just bake the creation/saving of the latents along with their spatial paramters into the checkpointing step of the AE experiment!
+- TODO: We need to update `create_latents.py`. If the data was augmented with cutmix, then it's spatial paramters need to be saved. It's probably less tedious to just bake the creation/saving of the latents along with their spatial paramters into the checkpointing step of the AE experiment!
 
 Once the latents have been made, you can run a quick debug to test to view stats and a sample reconstruction
 
 ```
 python OneNoise/decode_latents.py \
-    --latent_hdf5_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_20250416_002955/latent.hdf5 \
+    --latent_hdf5_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_cond_20250515_002907/latent.hdf5 \
     --ae_config_path cfgs/ae_custom_h5.yaml \
-    --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_20250416_002955/last-model.pth \
+    --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_cond_20250515_002907/last-model.pth \
     --noise_type voronoi \
     --sample_index 0 \
     --output_path ./decoded_images/ \

@@ -92,6 +92,18 @@ datasets:
       batch_size: 8
       num_workers: 4
 
+# Add/override decoder parameters for SPADE conditioning
+model:
+  args: 
+    decoder:
+      name: decoder_vqf4 
+      args: # params for models.vqgan.model.Decoder
+        use_spade: true         # Enable SPADE (Matches Decoder.__init__ param)
+        cond_dim: 128           
+        nclasses: 1             # << SET THIS: Number of noise classes (e.g., len(noise_types))
+        nparams: 25             #TODO: shouldnt this be 18? The shape from the hdf5 file is (25, 256, 256)
+        pos_enc_deg: 0
+
 visualize:
   ae_center_zoom_res: 1024 # Resolution for zoomed visualization if used 
   ds_samples: 4 # TODO: figure out why when this is > 0, the model hangs indefinitely
