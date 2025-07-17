@@ -20,14 +20,16 @@ python OneNoise/create_latents.py \
 Once the latents have been made, you can run a quick debug to test to view stats and a sample reconstruction
 
 ```
-python OneNoise/decode_latents.py \
+python -m OneNoise.decode_latents \
     --latent_hdf5_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_cond_20250515_002907/latent.hdf5 \
     --ae_config_path cfgs/ae_custom_h5.yaml \
     --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_cond_20250515_002907/last-model.pth \
     --noise_type voronoi \
     --sample_index 0 \
-    --output_path ./decoded_images/ \
-    --output_size 256
+    --output_path ./decoded_images/test.png \
+    --output_size 256 
+ 
+    
 ```
 
 > TODO: Fix `vertical_strip` outputs so that they correctly pass the correct gr4id dimensions to the INFD decoder + renderer.
