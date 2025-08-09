@@ -108,7 +108,7 @@ class ResnetBlock(nn.Module):
         self.out_channels = out_channels
         self.use_conv_shortcut = conv_shortcut
 
-        self.norm1 = Normalize(in_channels) if normalize else torch.nn.Identity()
+        self.norm1 = Normalize(out_channels) if normalize else torch.nn.Identity()
         self.conv1 = torch.nn.Conv2d(in_channels,
                                      out_channels,
                                      kernel_size=kernel_size,
@@ -139,27 +139,34 @@ class ResnetBlock(nn.Module):
                                                     padding=0)
         self.spade_cond_channels = spade_cond_channels
         if spade_cond_channels is not None:
-            self.spade_gamma = torch.nn.Conv2d(spade_cond_channels, out_channels, kernel_size=3, padding=1)
-            self.spade_beta = torch.nn.Conv2d(spade_cond_channels, out_channels, kernel_size=3, padding=1)
+            self.spade_conv = nn.Sequential(
+                nn.SiLU(),
+                nn.Conv2d(spade_cond_channels, out_channels, kernel_size=3, padding=1),
+                nn.SiLU()
+            )
+            self.spade_gamma = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+            self.spade_beta = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
 
 
     def forward(self, x, temb, c = None):
         h = x
+        h = self.conv1(h)
         h = self.norm1(h)
+        
 
-        if self.spade_cond_channels is not None and c is not None:
-            if h.shape[-2:] != c.shape[-2:]: # Ensure spatial dims match
+        if self.spade_cond_channels and c is not None:
+            if h.shape[-2:] != c.shape[-2:]:
                 c = torch.nn.functional.interpolate(c, size=h.shape[-2:], mode="nearest")
-            
-            spade_gamma_val = self.spade_gamma(c)
-            spade_beta_val = self.spade_beta(c)
+            feat = self.spade_conv(c)
+            spade_gamma_val = self.spade_gamma(feat)
+            spade_beta_val = self.spade_beta(feat)
             
             h = h * (spade_gamma_val + 1.0) + spade_beta_val
         else:
             h = h
-            
+             
         h = nonlinearity(h)
-        h = self.conv1(h)
+        
 
         if temb is not None:
             h = h + self.temb_proj(nonlinearity(temb))[:,:,None,None]
@@ -567,7 +574,8 @@ class Decoder(nn.Module):
                 block.append(ResnetBlock(in_channels=block_in,
                                          out_channels=block_out,
                                          temb_channels=self.temb_ch,
-                                         dropout=dropout))
+                                         dropout=dropout,
+                                         spade_cond_channels=cond_dim if self.use_spade else None))
                 block_in = block_out
                 if curr_res in attn_resolutions:
                     attn.append(make_attn(block_in, attn_type=attn_type))

@@ -21,14 +21,15 @@ accelerate launch --config_file OneNoise/accelerate.yml \
     OneNoise/train.py \
     --model_config medium \
     --latent_diffusion \
-    --latent_dataset_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_cond_20250515_002907/ \
+    --latent_dataset_path /users/ksaripal/data/ksaripal/infd/latent/ae_voronoi_cond_20250721_214820/ \
     --ae_config_path cfgs/ae_custom_h5.yaml \
-    --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_cond_20250515_002907/last-model.pth \
+    --ae_checkpoint_path /users/ksaripal/data/ksaripal/infd/ckpt/ae_voronoi_cond_20250721_214820/last-model.pth \
     --substance_params_dir /users/ksaripal/data/ksaripal/infd/image \
     --noise_types voronoi \
-    --out_dir /users/ksaripal/data/ksaripal/infd/out/ \
+    --out_dir /users/ksaripal/data/ksaripal/infd/latent_diffusion/ \
     --exp_name latent_voronoi_medium_test \
-    --batch_size 128 \
+    --milestone 15 \
+    --batch_size 100 \
     --grad_accum 2 \
     --sample_every 1000 \
     --train_num_steps 200000 \
